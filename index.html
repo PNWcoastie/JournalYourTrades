@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quant Journal & Performance Auditor</title>
+    <title>Quant Journal & Performance Auditor (v2.0)</title>
     <style>
         :root {
             --bg-color: #131722;
@@ -33,7 +33,7 @@
             border-radius: 8px;
             padding: 20px;
             width: 100%;
-            max-width: 650px;
+            max-width: 680px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         }
 
@@ -57,6 +57,13 @@
         .grid-4 {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             margin-bottom: 12px;
         }
@@ -94,7 +101,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
             margin-bottom: 20px;
         }
@@ -103,12 +110,12 @@
             background-color: rgba(19, 23, 34, 0.5);
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            padding: 12px;
+            padding: 10px;
             text-align: center;
         }
 
         .stat-val {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             color: #ffffff;
             margin-top: 4px;
@@ -124,7 +131,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            font-size: 11px;
             text-align: left;
         }
 
@@ -158,7 +165,7 @@
 
 <div class="container">
     <h2>
-        Quant Trading Journal <span class="subtitle">v1.0 (Local Storage)</span>
+        Quant Auditor <span class="subtitle">v2.0 (Expectancy Analyzer)</span>
     </h2>
 
     <!-- PERFORMANCE METRICS -->
@@ -172,14 +179,19 @@
             <div id="statPF" class="stat-val">0.00</div>
         </div>
         <div class="stat-card">
-            <label>Net Dollar P/L</label>
-            <div id="statNetPL" class="stat-val">$0.00</div>
+            <label>SOP Compliance</label>
+            <div id="statSOP" class="stat-val">0.0%</div>
+        </div>
+        <div class="stat-card">
+            <label>Avg. R-Multiple</label>
+            <div id="statAvgR" class="stat-val">0.00R</div>
         </div>
     </div>
 
     <!-- ADD TRADE FORM -->
     <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-bottom: 16px;">
-        <label style="font-weight: bold; text-transform: uppercase; margin-bottom: 8px; color: var(--accent-color);">Log Finished Trade</label>
+        <label style="font-weight: bold; text-transform: uppercase; margin-bottom: 8px; color: var(--accent-color);">Log Completed Trade</label>
+        
         <div class="grid-4">
             <div>
                 <label for="ticker">Ticker</label>
@@ -193,8 +205,33 @@
                 </select>
             </div>
             <div>
-                <label for="pnl">Net P/L ($)</label>
+                <label for="plannedRisk">Planned Risk ($)</label>
+                <input type="number" id="plannedRisk" value="10.00" step="1.00">
+            </div>
+            <div>
+                <label for="pnl">Actual Net P/L ($)</label>
                 <input type="number" id="pnl" value="0.00" step="0.01">
+            </div>
+        </div>
+
+        <div class="grid-3" style="margin-top: 8px;">
+            <div>
+                <label for="session">Execution Session</label>
+                <select id="session">
+                    <option value="Morning">Morning (9:30-11:30)</option>
+                    <option value="Midday">Midday (11:30-2:00)</option>
+                    <option value="Afternoon">Afternoon (2:00-4:00)</option>
+                </select>
+            </div>
+            <div>
+                <label for="compliance">SOP Behavior</label>
+                <select id="compliance">
+                    <option value="SOP-Met">SOP Met (Disciplined)</option>
+                    <option value="Chased">Error: Chased / FOMO</option>
+                    <option value="Ignored-Stop">Error: Ignored Stop</option>
+                    <option value="Early-Exit">Error: Panic Sold Early</option>
+                    <option value="Oversized">Error: Oversized Position</option>
+                </select>
             </div>
             <div>
                 <label>&nbsp;</label>
@@ -216,7 +253,11 @@
                     <tr>
                         <th>Ticker</th>
                         <th>Playbook</th>
-                        <th>Net P/L ($)</th>
+                        <th>Session</th>
+                        <th>Behavior</th>
+                        <th>Risk ($)</th>
+                        <th>P/L ($)</th>
+                        <th>R-Value</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -229,10 +270,10 @@
 </div>
 
 <script>
-    let journal = JSON.parse(localStorage.getItem('quant_journal')) || [];
+    let journal = JSON.parse(localStorage.getItem('quant_journal_v2')) || [];
 
     function updateAudit() {
-        localStorage.setItem('quant_journal', JSON.stringify(journal));
+        localStorage.setItem('quant_journal_v2', JSON.stringify(journal));
         
         const tbody = document.getElementById('journalBody');
         tbody.innerHTML = '';
@@ -242,16 +283,32 @@
         let grossProfit = 0;
         let grossLoss = 0;
         let netPL = 0;
+        let compliantTrades = 0;
+        let totalRValue = 0.0;
 
         journal.forEach((trade, index) => {
             const row = document.createElement('tr');
+            
+            const rValue = trade.risk > 0 ? trade.pnl / trade.risk : 0;
+            totalRValue += rValue;
+
             const pnlClass = trade.pnl >= 0 ? 'win' : 'loss';
             const pnlVal = (trade.pnl >= 0 ? '+$' : '-$') + Math.abs(trade.pnl).toFixed(2);
+            const rClass = rValue >= 0 ? 'win' : 'loss';
+            const rValStr = (rValue >= 0 ? '+' : '') + rValue.toFixed(2) + 'R';
             
+            if (trade.compliance === 'SOP-Met') {
+                compliantTrades++;
+            }
+
             row.innerHTML = `
                 <td><b>${trade.ticker}</b></td>
                 <td>${trade.playbook}</td>
+                <td>${trade.session}</td>
+                <td style="color: ${trade.compliance === 'SOP-Met' ? 'var(--success-color)' : '#ff9800'}">${trade.compliance}</td>
+                <td>$${trade.risk.toFixed(2)}</td>
                 <td class="${pnlClass}">${pnlVal}</td>
+                <td class="${rClass}" style="font-weight:bold;">${rValStr}</td>
                 <td><button class="btn-delete" onclick="deleteTrade(${index})">Delete</button></td>
             `;
             tbody.appendChild(row);
@@ -271,6 +328,8 @@
         const totalTrades = journal.length;
         const winRate = totalTrades > 0 ? (totalWins / totalTrades) * 100 : 0;
         const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? 999 : 0);
+        const sopRate = totalTrades > 0 ? (compliantTrades / totalTrades) * 100 : 0;
+        const avgRValue = totalTrades > 0 ? totalRValue / totalTrades : 0;
 
         // Update UI Cards
         document.getElementById('statWinRate').innerText = winRate.toFixed(1) + "%";
@@ -279,18 +338,24 @@
         document.getElementById('statPF').innerText = profitFactor.toFixed(2);
         document.getElementById('statPF').style.color = profitFactor >= 1.5 ? 'var(--success-color)' : (profitFactor >= 1 ? '#ffeb3b' : 'var(--danger-color)');
         
-        document.getElementById('statNetPL').innerText = (netPL >= 0 ? "+$" : "-$") + Math.abs(netPL).toFixed(2);
-        document.getElementById('statNetPL').style.color = netPL >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+        document.getElementById('statSOP').innerText = sopRate.toFixed(1) + "%";
+        document.getElementById('statSOP').style.color = sopRate >= 85 ? 'var(--success-color)' : '#ff9800';
+
+        document.getElementById('statAvgR').innerText = (avgRValue >= 0 ? "+" : "") + avgRValue.toFixed(2) + "R";
+        document.getElementById('statAvgR').style.color = avgRValue >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
     }
 
     function addTrade() {
         const ticker = document.getElementById('ticker').value.toUpperCase().trim();
         const playbook = document.getElementById('playbook').value;
+        const risk = parseFloat(document.getElementById('plannedRisk').value) || 0;
         const pnl = parseFloat(document.getElementById('pnl').value) || 0;
+        const session = document.getElementById('session').value;
+        const compliance = document.getElementById('compliance').value;
 
-        if (ticker === '') return;
+        if (ticker === '' || risk <= 0) return;
 
-        journal.push({ ticker, playbook, pnl });
+        journal.push({ ticker, playbook, risk, pnl, session, compliance });
         updateAudit();
 
         // Reset Form Inputs
