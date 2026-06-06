@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quant Journal & Performance Auditor</title>
+    <style>
+        :root {
+            --bg-color: #131722;
+            --card-bg: #1c2030;
+            --text-color: #d1d4dc;
+            --accent-color: #2962ff;
+            --success-color: #00e676;
+            --danger-color: #ff1744;
+            --border-color: #2a2e39;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            width: 100%;
+            max-width: 650px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            margin: 0 0 16px 0;
+            font-size: 18px;
+            color: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            color: #848e9c;
+            font-weight: normal;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            margin-bottom: 4px;
+            color: #848e9c;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 13px;
+            outline: none;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #1e4bd8;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background-color: rgba(19, 23, 34, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-top: 4px;
+        }
+
+        .journal-table-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--bg-color);
+            color: #848e9c;
+            padding: 8px;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .win { color: var(--success-color); }
+        .loss { color: var(--danger-color); }
+
+        .btn-delete {
+            background-color: transparent;
+            color: var(--danger-color);
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 2px 6px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>
+        Quant Trading Journal <span class="subtitle">v1.0 (Local Storage)</span>
+    </h2>
+
+    <!-- PERFORMANCE METRICS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <label>Realized Win Rate</label>
+            <div id="statWinRate" class="stat-val">0.0%</div>
+        </div>
+        <div class="stat-card">
+            <label>Profit Factor</label>
+            <div id="statPF" class="stat-val">0.00</div>
+        </div>
+        <div class="stat-card">
+            <label>Net Dollar P/L</label>
+            <div id="statNetPL" class="stat-val">$0.00</div>
+        </div>
+    </div>
+
+    <!-- ADD TRADE FORM -->
+    <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-bottom: 16px;">
+        <label style="font-weight: bold; text-transform: uppercase; margin-bottom: 8px; color: var(--accent-color);">Log Finished Trade</label>
+        <div class="grid-4">
+            <div>
+                <label for="ticker">Ticker</label>
+                <input type="text" id="ticker" placeholder="MARA">
+            </div>
+            <div>
+                <label for="playbook">Playbook</label>
+                <select id="playbook">
+                    <option value="Low-Float">Low-Float</option>
+                    <option value="Liquid-Beta">Liquid-Beta</option>
+                </select>
+            </div>
+            <div>
+                <label for="pnl">Net P/L ($)</label>
+                <input type="number" id="pnl" value="0.00" step="0.01">
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <button onclick="addTrade()">Save Trade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JOURNAL LOG -->
+    <div style="border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <label style="font-weight: bold; text-transform: uppercase; color: var(--accent-color);">Audit Log</label>
+            <button onclick="clearJournal()" style="width: auto; padding: 2px 8px; font-size: 10px; background-color: var(--danger-color);">Reset All</button>
+        </div>
+        
+        <div class="journal-table-container">
+            <table id="journalTable">
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Playbook</th>
+                        <th>Net P/L ($)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="journalBody">
+                    <!-- Dynamic entries -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let journal = JSON.parse(localStorage.getItem('quant_journal')) || [];
+
+    function updateAudit() {
+        localStorage.setItem('quant_journal', JSON.stringify(journal));
+        
+        const tbody = document.getElementById('journalBody');
+        tbody.innerHTML = '';
+        
+        let totalWins = 0;
+        let totalLosses = 0;
+        let grossProfit = 0;
+        let grossLoss = 0;
+        let netPL = 0;
+
+        journal.forEach((trade, index) => {
+            const row = document.createElement('tr');
+            const pnlClass = trade.pnl >= 0 ? 'win' : 'loss';
+            const pnlVal = (trade.pnl >= 0 ? '+$' : '-$') + Math.abs(trade.pnl).toFixed(2);
+            
+            row.innerHTML = `
+                <td><b>${trade.ticker}</b></td>
+                <td>${trade.playbook}</td>
+                <td class="${pnlClass}">${pnlVal}</td>
+                <td><button class="btn-delete" onclick="deleteTrade(${index})">Delete</button></td>
+            `;
+            tbody.appendChild(row);
+
+            // Calculations
+            netPL += trade.pnl;
+            if (trade.pnl >= 0) {
+                totalWins++;
+                grossProfit += trade.pnl;
+            } else {
+                totalLosses++;
+                grossLoss += Math.abs(trade.pnl);
+            }
+        });
+
+        // Calculate Metrics
+        const totalTrades = journal.length;
+        const winRate = totalTrades > 0 ? (totalWins / totalTrades) * 100 : 0;
+        const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? 999 : 0);
+
+        // Update UI Cards
+        document.getElementById('statWinRate').innerText = winRate.toFixed(1) + "%";
+        document.getElementById('statWinRate').style.color = winRate >= 50 ? 'var(--success-color)' : 'var(--danger-color)';
+        
+        document.getElementById('statPF').innerText = profitFactor.toFixed(2);
+        document.getElementById('statPF').style.color = profitFactor >= 1.5 ? 'var(--success-color)' : (profitFactor >= 1 ? '#ffeb3b' : 'var(--danger-color)');
+        
+        document.getElementById('statNetPL').innerText = (netPL >= 0 ? "+$" : "-$") + Math.abs(netPL).toFixed(2);
+        document.getElementById('statNetPL').style.color = netPL >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+    }
+
+    function addTrade() {
+        const ticker = document.getElementById('ticker').value.toUpperCase().trim();
+        const playbook = document.getElementById('playbook').value;
+        const pnl = parseFloat(document.getElementById('pnl').value) || 0;
+
+        if (ticker === '') return;
+
+        journal.push({ ticker, playbook, pnl });
+        updateAudit();
+
+        // Reset Form Inputs
+        document.getElementById('ticker').value = '';
+        document.getElementById('pnl').value = '0.00';
+    }
+
+    function deleteTrade(index) {
+        journal.splice(index, 1);
+        updateAudit();
+    }
+
+    function clearJournal() {
+        if(confirm("Are you sure you want to completely erase your audit log? This cannot be undone.")) {
+            journal = [];
+            updateAudit();
+        }
+    }
+
+    // Initialize on load
+    updateAudit();
+</script>
+</body>
+</html>
